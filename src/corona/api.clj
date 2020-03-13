@@ -6,7 +6,8 @@
             [clojure.string :as s]
             [corona.core :refer [bot-ver read-number dbg]]
             [corona.countries :as cc]
-            [corona.core :as c])
+            [corona.core :as c]
+            [corona.accidents :as ac])
   (:import java.text.SimpleDateFormat))
 
 ;; TODO evaluate web services
@@ -93,7 +94,15 @@
                    )))
        (reduce + 0)))
 
-(defn sums-for-case [{:keys [case pred]}]
+(defn sums-for-case
+  "E.g. all countries
+  (sums-for-case {:pred (fn [_] true) :case :confirmed})  ;; i.e. country-code is \"ZZ\"
+  (sums-for-case {:pred (fn [_] true) :case :recovered})
+  (sums-for-case {:pred (fn [_] true) :case :deaths})
+
+  (sums-for-case {:pred (fn [loc] (= \"IT\" (:country_code loc))) :case :deaths})
+  "
+  [{:keys [case pred] :as prm}]
   (let [locations (->> (data-memo) case :locations
                        (filter pred))]
     (->> (raw-dates)
@@ -110,7 +119,6 @@
 (defn deaths    [prm] (:d (get-counts prm)))
 (defn recovered [prm] (:r (get-counts prm)))
 (defn ill       [prm] (:i (get-counts prm)))
-
 (defn dates []
   (let [sdf (new SimpleDateFormat "MM/dd/yy")]
     (->> (raw-dates)
@@ -118,10 +126,15 @@
          (map keyname)
          (map (fn [rd] (.parse sdf rd))))))
 
+(defn accidents [prm] (->> (range (count (dates)))
+                           (map (fn [day] (* (inc day) (ac/deaths prm))))
+                           (map int)))
+
 (defn last-day [prm]
   (conj {:f (last (dates))}
-        (zipmap [:c :d :r :i]
+        (zipmap [:c :d :r :i :a]
                 (map last [(confirmed prm)
                            (deaths    prm)
                            (recovered prm)
-                           (ill       prm)]))))
+                           (ill       prm)
+                           (accidents prm)]))))

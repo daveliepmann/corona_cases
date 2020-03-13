@@ -8,7 +8,15 @@
             [corona.interpolate :as i]
             [corona.tables :as tab]
             [corona.countries :as co]
+            [corona.accidents :as ac]
             [corona.core :as c :refer [in?]]))
+
+(defn begining []
+  (->> (data/dates)
+       first
+       tc/from-date
+       (tf/unparse (tf/with-zone (tf/formatter "dd MMM")
+                     (t/default-time-zone)))))
 
 (def lang-strings
   {
@@ -26,22 +34,27 @@
    :recovered    "Recovered"
    :sick         "Sick"
    :closed       "Closed"
+   :accidents    (format "Road kills since %s (estimated)" (begining))  ;; this will fail
+   :snapshot     "snapshot"
+   :country      "<country>"
    })
 
-(def s-world        (:world        lang-strings))
-(def s-world-desc   (:world-desc   lang-strings))
-(def s-start        (:start        lang-strings))
-(def s-list         (:list         lang-strings))
-(def s-list-desc    (:list-desc    lang-strings))
-(def s-about        (:about        lang-strings))
-(def s-contributors (:contributors lang-strings))
-(def s-references   (:references   lang-strings))
-(def s-feedback     (:feedback     lang-strings))
-(def s-confirmed    (:confirmed    lang-strings))
-(def s-deaths       (:deaths       lang-strings))
-(def s-recovered    (:recovered    lang-strings))
-(def s-sick         (:sick         lang-strings))
-(def s-closed       (:closed       lang-strings))
+(def cmd-s-world        (:world        lang-strings))
+(def cmd-s-world-desc   (:world-desc   lang-strings))
+(def cmd-s-start        (:start        lang-strings))
+(def cmd-s-list         (:list         lang-strings))
+(def cmd-s-list-desc    (:list-desc    lang-strings))
+(def cmd-s-about        (:about        lang-strings))
+(def cmd-s-contributors (:contributors lang-strings))
+(def cmd-s-references   (:references   lang-strings))
+(def cmd-s-feedback     (:feedback     lang-strings))
+(def cmd-s-confirmed    (:confirmed    lang-strings))
+(def cmd-s-deaths       (:deaths       lang-strings))
+(def cmd-s-recovered    (:recovered    lang-strings))
+(def cmd-s-sick         (:sick         lang-strings))
+(def cmd-s-closed       (:closed       lang-strings))
+(def cmd-s-snapshot     (:snapshot     lang-strings))
+(def cmd-s-country      (:country      lang-strings))
 
 (def cmd-names [s-world
                 #_"interpolate"
@@ -149,6 +162,9 @@
 
 (def ref-age-sex
   "https://www.worldometers.info/coronavirus/coronavirus-age-sex-demographics/")
+
+(def ref-who-report
+  "https://www.who.int/publications-detail/global-status-report-on-road-safety-2018")
 
 (defn link [name url] (str "[" name "]""(" url ")"))
 
@@ -279,11 +295,19 @@
                   [country-code
                    (c/country-code-3-letter country-code)])))
 
-     (let [{confirmed :c} last-day]
+     (let [{confirmed :c accidents :a} last-day]
        (str
-        s-confirmed ": " confirmed "\n"
+        (format "%s: %s\n" s-confirmed confirmed)
+        (format
+         "%s: %s %s based on %s (calculated for 2016 - see the PDF file)\n\n"
+         s-accidents accidents
+         "  "
+         (link "2018 WHO estimation" ref-who-report))
+        #_(str "    since " (begining))
+
+        ;; s-accidents ": " accidents "    since " (begining) "\n\n"
         (if (pos? confirmed)
-          (let [{deaths :d recovered :r ill :i} last-day
+          (let [{deaths :d recovered :r ill :i accidents :a} last-day
                 closed (+ deaths recovered)]
             (str
              (fmt s-sick      ill       confirmed "")
@@ -309,6 +333,7 @@
         deaths    (data/deaths    prm)
         recovered (data/recovered prm)
         ill       (data/ill       prm)
+        accidents (data/accidents prm)
         dates     (data/dates)]
     (-> (chart/xy-chart
          (conj {}
@@ -338,6 +363,14 @@
                               {:marker-type :none}
                               {:render-style :line}
                               {:line-color :green})}}
+               {s-accidents
+                {:x dates :y accidents
+                 :style (conj {}
+                              #_#{:blue :black :cyan :dark-gray :gray :grey :green :light-gray
+                                :magenta :orange :pink :red :white :yellow}
+                              {:marker-type :none}
+                              {:render-style :line}
+                              {:line-color :gray})}}
                )
          (conj {}
                {:title

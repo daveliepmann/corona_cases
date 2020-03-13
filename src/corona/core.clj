@@ -74,7 +74,7 @@
   {default-2-country-code "QQQ"})
 
 (def country-code-worldwide {worldwide-2-country-code "Worldwide"})
-(def country-code-others {default-2-country-code "Others"})
+(def country-code-others    {default-2-country-code   "Others"})
 
 (def country-code-2-to-3-hm
   "Mapping of country codes 2 -> 3 letters"
@@ -192,7 +192,8 @@
     Islands, U.S." "WF" "Wallis and Futuna" "EH" "Western Sahara" "YE" "Yemen"
     "ZM" "Zambia" "ZW" "Zimbabwe"}
    country-code-worldwide
-   country-code-others))
+   country-code-others
+   ))
 
 (defn country-name
   "Country name from 2-letter country code: \"DE\" -> \"Germany\" "
