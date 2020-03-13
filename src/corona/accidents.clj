@@ -1,18 +1,28 @@
 (ns corona.accidents
+  "https://en.wikipedia.org/wiki/List_of_countries_by_traffic-related_death_rate"
   (:require
    [clojure.string :as s]
    [corona.core :as c :refer [in?]]
-   [clojure.string :as s]))
+   [corona.countries :as co]))
 
 (def death-rates
+  "
+  0 Country
+  1 Continent
+  2 Road fatalities per 100,000 inhabitants per year
+  3 Road fatalities per 100,000 motor vehicles
+  4 Road fatalities per 1 billion vehicle-km
+  5 Total fatalities latest year (adjusted/estimated figures by WHO report)
+  6 Year, data source (standard source: The WHO report 2015, data from 2013 The WHO report 2018, data from 2016
+  "
   [
-   ["World"                            ""                  18.2     nil        nil     1350000    2016]
-   ["Africa"                           ""                  26.6     574        nil     246719     2016]
-   ["Eastern Mediterranean"            ""                  18.0     139        nil     122730     2016]
-   ["Western Pacific"                  ""                  16.9     69         nil     328591     2016]
-   ["South-east Asia"                  ""                  20.7     101        nil     316080     2016]
-   ["Americas"                         ""                  15.6     33         nil     153789     2016]
-   ["Europe"                           ""                  9        19         nil     85629      2018]
+   ;; ["World"                            ""                  18.2     nil        nil     1350000    2016]
+   ;; ["Africa"                           ""                  26.6     574        nil     246719     2016]
+   ;; ["Eastern Mediterranean"            ""                  18.0     139        nil     122730     2016]
+   ;; ["Western Pacific"                  ""                  16.9     69         nil     328591     2016]
+   ;; ["South-east Asia"                  ""                  20.7     101        nil     316080     2016]
+   ;; ["Americas"                         ""                  15.6     33         nil     153789     2016]
+   ;; ["Europe"                           ""                  9        19         nil     85629      2018]
    ["Afghanistan"                      "Asia"              15.5     722.4      nil     4734       2013]
    ["Albania"                          "Europe"            13.6     107.2      nil     399        2018]
    ["Algeria"                          "Africa"            23.8     127.8      nil     9337       2013]
@@ -196,8 +206,205 @@
    ["Zimbabwe"                         "Africa"            28.2     429.8      nil     3985       2013]
    ])
 
-(defn countries []
+(def country--name-code-hm
+  {
+   "Afghanistan" "AF"
+   "Albania" "AL"
+   "Algeria" "DZ"
+   "Andorra" "AD"
+   "Angola" "AO"
+   "Antigua and Barbuda" "AG"
+   "Argentina" "AR"
+   "Armenia" "AM"
+   "Australia" "AU"
+   "Austria" "AT"
+   "Azerbaijan" "AZ"
+   "Bahamas" "BS"
+   "Bahrain" "BH"
+   "Bangladesh" "BD"
+   "Barbados" "BB"
+   "Belarus" "BY"
+   "Belgium" "BE"
+   "Belize" "BZ"
+   "Benin" "BJ"
+   "Bhutan" "BT"
+   "Bolivia" "BO"
+   "Bosnia and Herzegovina" "BA"
+   "Botswana" "BW"
+   "Brazil" "BR"
+   "Bulgaria" "BG"
+   "Burkina Faso" "BF"
+   "Cambodia" "KH"
+   "Cameroon" "CM"
+   "Canada" "CA"
+   "Cape Verde" "CV"
+   "Central African Republic" "CF"
+   "Chad" "TD"
+   "Chile" "CL"
+   "China" "CN"
+   "Colombia" "CO"
+   "Congo" "CG"
+   "Cook Islands" "CK"
+   "Costa Rica" "CR"
+   "Croatia" "HR"
+   "Cuba" "CU"
+   "Cyprus" "CY"
+   "Czech Republic" "CZ"
+   "Democratic Republic of the Congo" "CD"
+   "Denmark" "DK"
+   "Djibouti" "DJ"
+   "Dominica" "DM"
+   "Dominican Republic" "DO"
+   "Ecuador" "EC"
+   "Egypt" "EG"
+   "El Salvador" "SV"
+   "Eritrea" "ER"
+   "Estonia" "EE"
+   "Ethiopia" "ET"
+   "Fiji" "FJ"
+   "Finland" "FI"
+   "France" "FR"
+   "Gabon" "GA"
+   "Gambia" "GM"
+   "Georgia" "GE"
+   "Germany" "DE"
+   "Ghana" "GH"
+   "Greece" "GR"
+   "Guatemala" "GT"
+   "Guinea" "GN"
+   "Guinea-Bissau" "GW"
+   "Guyana" "GY"
+   "Honduras" "HN"
+   "Hungary" "HU"
+   "Iceland" "IS"
+   "India" "IN"
+   "Indonesia" "ID"
+   "Iran" "IR"
+   "Iraq" "IQ"
+   "Ireland" "IE"
+   "Israel" "IL"
+   "Italy" "IT"
+   "Ivory Coast" "CI"
+   "Jamaica" "JM"
+   "Japan" "JP"
+   "Jordan" "JO"
+   "Kazakhstan" "KZ"
+   "Kenya" "KE"
+   "Kiribati" "KI"
+   "Kuwait" "KW"
+   "Kyrgyzstan" "KG"
+   "Laos" "LA"
+   "Latvia" "LV"
+   "Lebanon" "LB"
+   "Lesotho" "LS"
+   "Liberia" "LR"
+   "Libya" "LY"
+   "Lithuania" "LT"
+   "Luxembourg" "LU"
+   "North Macedonia" "MK"
+   "Madagascar" "MG"
+   "Malawi" "MW"
+   "Malaysia" "MY"
+   "Maldives" "MV"
+   "Mali" "ML"
+   "Malta" "MT"
+   "Marshall Islands" "MH"
+   "Mauritania" "MR"
+   "Mauritius" "MU"
+   "Mexico" "MX"
+   "Federated States of Micronesia" "FM"
+   "Monaco" "MC"
+   "Mongolia" "MN"
+   "Montenegro" "ME"
+   "Morocco" "MA"
+   "Mozambique" "MZ"
+   "Myanmar" "MM"
+   "Namibia" "NA"
+   "Nepal" "NP"
+   "Netherlands" "NL"
+   "New Zealand" "NZ"
+   "Nicaragua" "NI"
+   "Niger" "NE"
+   "Nigeria" "NG"
+   "Norway" "NO"
+   "Oman" "OM"
+   "Pakistan" "PK"
+   "Palau" "PW"
+   "Panama" "PA"
+   "Papua New Guinea" "PG"
+   "Paraguay" "PY"
+   "Peru" "PE"
+   "Philippines" "PH"
+   "Poland" "PL"
+   "Portugal" "PT"
+   "Qatar" "QA"
+   "Republic of Moldova" "MD"
+   "Romania" "RO"
+   "Russia" "RU"
+   "Rwanda" "RW"
+   "Saint Lucia" "LC"
+   "Saint Vincent and the Grenadines" "VC"
+   "Samoa" "WS"
+   "San Marino" "SM"
+   "São Tomé and Príncipe" "ST"
+   "Saudi Arabia" "SA"
+   "Senegal" "SN"
+   "Serbia" "RS"
+   "Seychelles" "SC"
+   "Sierra Leone" "SL"
+   "Singapore" "SG"
+   "Slovakia" "SK"
+   "Slovenia" "SI"
+   "Solomon Islands" "SB"
+   "Somalia" "SO"
+   "South Africa" "ZA"
+   "South Korea" "KR"
+   "Spain" "ES"
+   "Sri Lanka" "LK"
+   "Sudan" "SD"
+   "Suriname" "SR"
+   "Swaziland" "SZ"
+   "Sweden" "SE"
+   "Switzerland" "CH"
+   "Taiwan" "TW"
+   "Tajikistan" "TJ"
+   "Tanzania" "TZ"
+   "Thailand" "TH"
+   "Timor-Leste" "TL"
+   "Togo" "TG"
+   "Tonga" "TO"
+   "Trinidad and Tobago" "TT"
+   "Tunisia" "TN"
+   "Turkey" "TR"
+   "Turkmenistan" "TM"
+   "Uganda" "UG"
+   "Ukraine" "UA"
+   "United Arab Emirates" "AE"
+   "United Kingdom" "GB"
+   "United States" "US"
+   "Uruguay" "UY"
+   "Uzbekistan" "UZ"
+   "Vanuatu" "VU"
+   "Vietnam" "VN"
+   "Yemen" "YE"
+   "Zambia" "ZM"
+   "Zimbabwe" "ZW"
+   })
+
+(defn country--name-code []
   (->> death-rates
        (remove (fn [dr]
                  (in? ["World" "Africa" "Eastern Mediterranean"
-                       "Western Pacific" "South-east Asia" "Americas" "Europe"] dr)))))
+                       "Western Pacific" "South-east Asia"
+                       "Americas" "Europe"] dr)))
+       (mapv (fn [[cn & rest]] [cn (co/country_code cn)]))))
+
+(defn deaths
+  "Number of deaths for a country code"
+  [country-code]
+  (let [country-name (get (clojure.set/map-invert country--name-code-hm)
+                          country-code)]
+    (nth (->> death-rates
+              (filter (fn [[cn & rest]] (= country-name cn)))
+              (reduce identity))
+         5)))
