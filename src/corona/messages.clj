@@ -166,6 +166,9 @@
 (def ref-who-report
   "https://www.who.int/publications-detail/global-status-report-on-road-safety-2018")
 
+(def ref-death-on-the-roads
+  "https://extranet.who.int/roadsafety/death-on-the-roads/")
+
 (defn link [name url] (str "[" name "]""(" url ")"))
 
 (defn footer [{:keys [cmd-names parse_mode]}]
@@ -296,13 +299,14 @@
                    (c/country-code-3-letter country-code)])))
 
      (let [{confirmed :c accidents :a} last-day]
-       (str
-        (format "%s: %s\n" s-confirmed confirmed)
+       (format "\n%s\n*Corona cases*:\n%s%s"
         (format
-         "%s: %s %s based on %s (calculated for 2016 - see the PDF file)\n\n"
-         s-accidents accidents
-         "  "
-         (link "2018 WHO estimation" ref-who-report))
+         "*%s* %s based on %s (calculated for 2016); see %s\n"
+         accidents s-accidents
+         (link "2018 WHO estimation" ref-who-report)
+         (link "Death on the roads"  ref-death-on-the-roads))
+
+        (format "%s: %s\n" s-confirmed confirmed)
         #_(str "    since " (begining))
 
         ;; s-accidents ": " accidents "    since " (begining) "\n\n"
